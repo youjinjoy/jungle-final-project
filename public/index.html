@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script>
+    document.addEventListener('mouseup', () => {
+    const selectedText = window.getSelection();
+
+    // 텍스트를 1글자 이상 긁었을 때 형광펜 효과를 적용하는 로직
+    if (selectedText.toString().length > 0) {
+      const text = selectedText.toString()
+      const start = selectedText.getRangeAt(0).startOffset;
+      const end = selectedText.getRangeAt(0).endOffset;
+
+      console.log("selectedText: ", text);
+      console.log("startOffset: ", start);
+      console.log("endOffset: ", end);
+
+      // 형광펜 효과 적용
+      if (!selectedText.isCollapsed) {
+      const range = selectedText.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style.backgroundColor = 'yellow'; // 형광펜 효과
+      range.surroundContents(span);
+      }
+
+      // 형광펜 정보 저장
+      const highlightInfo = {
+        text: text, // 형광펜 칠해진 글자 
+        startOffset: start, // 시작 위치
+        endOffset: end, // 끝 위치
+        // 추가 정보 (예: 페이지 식별자, 위치 등)
+      };
+
+      console.log(highlightInfo);
+
+      // 형광펜 정보를 백엔드로 전송
+      sendHighlightToServer(highlightInfo);
+    }
+  });
+
+  function sendHighlightToServer(highlightInfo) {
+    fetch('/api/save-highlight', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(highlightInfo),
+    });
+  }
+
+  </script>
+</head>
+<body>
+  Lorem ipsum dolor, sit amet consectetur adipisicing elit. Repellat unde aliquid enim nemo mollitia quae veniam similique, inventore qui distinctio maxime explicabo vitae velit modi voluptate, natus voluptatem eveniet itaque?
+</body>
+</html>
