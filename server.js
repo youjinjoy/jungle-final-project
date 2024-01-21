@@ -18,6 +18,14 @@ const highlightSchema = new Schema({
 
 const Highlight = mongoose.model('Highlight', highlightSchema);
 
+// HTML 내용 저장
+const htmlContentSchema = new Schema({
+  html: String
+});
+
+const HtmlContent = mongoose.model('HtmlContent', htmlContentSchema);
+
+
 /*********************/
 
 // const morgan = require('morgan')
@@ -43,7 +51,6 @@ app.get('/', (req, res) => {
 let savedData = {};
 
 app.post('/api/save-highlight', (req, res) => {
-  let savedData = req.body;
   const newHighlight = new Highlight(req.body);
   newHighlight.save().then(() => res.send('Highlight saved'));
   // console.log("/api/save-highlight post test",savedData);
@@ -106,6 +113,30 @@ app.post('/api/delete-one-highlight', async (req, res) => {
     res.status(500).send('Error occurred: ' + error.message);
   }
 });
+
+app.post('/api/save-text', async (req, res) => {
+  try {
+    const { html } = req.body;
+    // DB에 html 저장 로직
+    const newHtmlContent = new HtmlContent({ html });
+    await newHtmlContent.save();
+    res.status(200).send('내용 저장 성공');
+  } catch (error) {
+    res.status(500).send('Error occurred: ' + error.message);
+  }
+});
+
+app.get('/api/get-text', async (req, res) => {
+  try {
+    // DB에서 html 데이터 가져오기
+    const htmlContent = await HtmlContent.findOne({}).sort({ _id: -1 }); // 가장 최근에 저장된 내용 가져오기
+    res.json({ html: htmlContent });
+  } catch (error) {
+    res.status(500).send('Error occurred: ' + error.message);
+  }
+});
+
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
