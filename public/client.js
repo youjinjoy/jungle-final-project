@@ -8,20 +8,51 @@ drawStoredHighlightsMemo();
 /**************************/
 // highlight_id를 추적하기 위한 전역 변수
 let highlightId = 1;
+
+// 하이라이트 칠해주는 함수
+function highlightRange(range) {
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+
+  const nodes = [];
+  while (walker.nextNode()) {
+    const currentNode = walker.currentNode;
+    if (range.intersectsNode(currentNode)) {
+      nodes.push(currentNode);
+    }
+  }
+
+  nodes.forEach(node => {
+    const span = document.createElement('span');
+    // span.className = 'highlight';
+    span.style.backgroundColor = 'yellow'; // 형광펜 효과
+    node.parentNode.replaceChild(span, node);
+    span.appendChild(node);
+  });
+}
+
 // 형광펜 드래그 이벤트 리스너
 document.addEventListener('mouseup', () => {
-const selectedText = window.getSelection();
+  const selectedText = window.getSelection();
 
-// 텍스트를 1글자 이상 긁었을 때 형광펜 효과를 적용하는 로직
-if (selectedText.toString().length > 0) {
-  const text = selectedText.toString();
-  const start = selectedText.getRangeAt(0).startOffset;
-  const end = selectedText.getRangeAt(0).endOffset;
+  if (selectedText.rangeCount > 0 && !selectedText.isCollapsed) {
+    const range = selectedText.getRangeAt(0);
+    highlightRange(range);
 
-  console.log("selectedText: ", text);
-  console.log("startOffset: ", start);
-  console.log("endOffset: ", end);
+    const text = selectedText.toString();
+    const start = selectedText.getRangeAt(0).startOffset;
+    const end = selectedText.getRangeAt(0).endOffset;
+  
+    console.log("selectedText: ", text);
+    console.log("startOffset: ", start);
+    console.log("endOffset: ", end);
+  }
 
+  /**/
   // 형광펜 효과 적용
   if (!selectedText.isCollapsed) {
   const range = selectedText.getRangeAt(0);
@@ -51,7 +82,7 @@ if (selectedText.toString().length > 0) {
   drawTextContainerFromServer();
 
   }
-});
+);
 
 /**************************/
 // 형광펜 정보를 백엔드로 전송하는 함수
