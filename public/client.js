@@ -1,3 +1,5 @@
+import Chart from 'chart.js/auto';
+
 /**************************/
 // 형광펜 메모 그려주는 함수 호출
 // drawStoredHighlightsMemo();
@@ -176,7 +178,7 @@ function findOneHighlight(id) {
 // 모두 삭제 버튼 이벤트 핸들러
 document.getElementById('deleteAllButton').addEventListener('click', function() {
 if (confirm('정말로 모든 데이터를 삭제하시겠습니까?')) {
-  fetch('/api/delete-highlights', { method: 'POST' })
+  fetch('/api/delete-highlights', { method: 'POST', body: JSON.stringify({ textContainer: textContainer }) })
     .then(response => {
       if (response.ok) {
         alert('모든 데이터가 삭제되었습니다.');
@@ -188,3 +190,58 @@ if (confirm('정말로 모든 데이터를 삭제하시겠습니까?')) {
     .catch(error => console.error('Error:', error));
 }
 });
+
+function drawOriginalTextContainerFromServer(){
+  // index.html에서 태그 포함 div 요소 내 모든거 가져오기
+  const textContainero = document.getElementById('page-container');
+  const textContainerContento = textContainero.outerHTML;
+  // console.log(textContainerContento);
+
+  // index.html에서 div 요소 내 텍스트 가져오기
+  const textContainer = document.getElementById('page-container');
+  const textContainerContent = textContainer.innerHTML;
+  // console.log(textContainerContent);
+}
+
+/**************************/
+// 그래프
+
+let timeSpent = 0;
+let scrollPositions = [];
+let timeIntervals = [];
+
+// Update time every second
+setInterval(() => {
+  timeSpent++;
+  timeIntervals.push(timeSpent);
+}, 1000);
+
+// Track scroll position
+window.onscroll = () => {
+  const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+  scrollPositions.push(scrollPosition);
+};
+
+
+new Chart(document.getElementById("myChart"), {
+  type: 'line',
+  data: {
+      labels: timeIntervals, // X-axis labels
+      datasets: [{
+          label: 'Scroll Position',
+          data: scrollPositions,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1
+      }]
+  },
+  options: {
+      scales: {
+          y: {
+              beginAtZero: true
+          }
+      }
+  }
+});
+// Eventually, use these arrays to plot your graph
+// timeIntervals = [1, 2, 3, 4, 5, ...] (Time in seconds)
+// scrollPositions = [0, 120, 240, 360, 480, ...] (Scroll Y Position)

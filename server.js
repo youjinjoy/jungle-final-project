@@ -2,6 +2,7 @@
 /* mongoDB */
 
 const mongoose = require('mongoose');
+const os = require('os');
 
 mongoose.connect('mongodb://localhost:27017', {
   useNewUrlParser: true,
@@ -132,9 +133,22 @@ app.get('/api/get-text', async (req, res) => {
   }
 });
 
-
+function getLocalExternalIp() {
+  const interfaces = os.networkInterfaces();
+  for (const devName in interfaces) {
+    const iface = interfaces[devName];
+    for (const alias of iface) {
+      if (alias.family === "IPv4" && !alias.internal) {
+        return alias.address;
+      }
+    }
+  }
+  return "0.0.0.0";
+}
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
+  console.log(`http://localhost:${port}`);
+  console.log(`http://${getLocalExternalIp()}:${port}`);
 })
 
