@@ -8,23 +8,27 @@ mongoose.connect('mongodb://localhost:27017', {
   useUnifiedTopology: true,
 });
 
+/* modeling */
 const Schema = mongoose.Schema;
 
-const highlightSchema = new Schema({
+const highlightInfoSchema = new Schema({
   text: String,
+  startContainer: Schema.Types.Mixed,
   startOffset: Number,
-  endOffset: Number,
+  endContainer: Schema.Types.Mixed,
+  endOffset: Number
 });
 
-const Highlight = mongoose.model('Highlight', highlightSchema);
+const highlightSchema = new Schema({
+  highlightInfos: [highlightInfoSchema] 
+});
 
-// HTML 내용 저장
 const htmlContentSchema = new Schema({
   html: String
 });
 
+const Highlight = mongoose.model('Highlights', highlightSchema);
 const HtmlContent = mongoose.model('HtmlContent', htmlContentSchema);
-
 
 /*********************/
 
@@ -40,15 +44,6 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.render('index')
 })
-
-
-
-// const requestTime = function (req, res, next) {
-//   req.requestTime = Date.now();
-//   console.log(req.requestTime);
-// }
-// app.use(requestTime);
-let savedData = {};
 
 app.post('/api/save-highlight', (req, res) => {
   const newHighlight = new Highlight(req.body);
@@ -114,6 +109,7 @@ app.post('/api/delete-one-highlight', async (req, res) => {
   }
 });
 
+/* text */
 app.post('/api/save-text', async (req, res) => {
   try {
     const { html } = req.body;

@@ -1,9 +1,6 @@
 /**************************/
-// 형광펜 텍스트 그려주는 함수 호출
-drawTextContainerFromServer();
-
 // 형광펜 메모 그려주는 함수 호출
-drawStoredHighlightsMemo();
+// drawStoredHighlightsMemo();
 
 /**************************/
 // highlight_id를 추적하기 위한 전역 변수
@@ -11,88 +8,93 @@ let highlightId = 1;
 
 // 하이라이트 칠해주는 함수
 function highlightRange(range) {
+
+  let passNode = false;
+  console.log("encestor" , range.commonAncestorContainer.textContent)
+  console.log("start", range.startContainer.textContent, "end", range.endContainer.textContent)
+
+  const filterFunction = function(node) {
+
+    if(node.hasChildNodes()){
+      return NodeFilter.FILTER_SKIP
+    }
+
+    if (node === range.startContainer) {
+      passNode = true;
+    }
+    
+    console.log("filtering : ", node.textContent)
+    const filterState = passNode ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+
+    if (node === range.endContainer) {
+      passNode = false;
+    }
+  
+    return filterState
+  };
+
   const walker = document.createTreeWalker(
     range.commonAncestorContainer,
-    NodeFilter.SHOW_TEXT,
-    null,
-    false
+    NodeFilter.SHOW_ALL,
+    filterFunction
   );
 
-  const nodes = [];
-  while (walker.nextNode()) {
-    const currentNode = walker.currentNode;
-    if (range.intersectsNode(currentNode)) {
-      nodes.push(currentNode);
-    }
-  }
+  let parentElement;
 
-  nodes.forEach(node => {
-    const span = document.createElement('span');
-    // span.className = 'highlight';
-    span.style.backgroundColor = 'yellow'; // 형광펜 효과
-    node.parentNode.replaceChild(span, node);
-    span.appendChild(node);
-  });
+  let currentNode = walker.nextNode()
+  while (currentNode){
+    const nextNode = walker.nextNode();
+    parentElement = currentNode.parentNode;
+    console.log("walking", currentNode.textContent)
+    
+    const marker = document.createElement("mark")
+    marker.classList.add("red") // 'yellow' 클래스 추가
+    parentElement.replaceChild(marker, currentNode);
+    marker.appendChild(currentNode)
+    currentNode = nextNode;
+  } 
+  highlightId++; 
 }
 
 // 형광펜 드래그 이벤트 리스너
 document.addEventListener('mouseup', () => {
-  const selectedText = window.getSelection();
+  console.log("mouseup");
+  const selectedRange = window.getSelection();
 
-  if (selectedText.rangeCount > 0 && !selectedText.isCollapsed) {
-    const range = selectedText.getRangeAt(0);
-    highlightRange(range);
+  if (selectedRange.rangeCount > 0 && !selectedRange.isCollapsed) {
+    const highlightInfos = []
 
-    const text = selectedText.toString();
-    const start = selectedText.getRangeAt(0).startOffset;
-    const end = selectedText.getRangeAt(0).endOffset;
-  
-    console.log("selectedText: ", text);
-    console.log("startOffset: ", start);
-    console.log("endOffset: ", end);
+    for (let i = 0; i < selectedRange.rangeCount; i++) {
+      const range = selectedRange.getRangeAt(i);
+      // range에 대한 처리...
+      // wrapRange(range,"yellow")
+      highlightRange(range);
+
+      // 형광펜 정보 저장
+      highlightInfos.push({
+        text: selectedRange.toString(), // 형광펜 칠해진 글자
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset // 끝 위치
+      });
+    }
+    // 형광펜 정보를 백엔드로 전송
+    sendHighlightToServer(highlightInfos);
   }
-
-  /**/
-  // 형광펜 효과 적용
-  if (!selectedText.isCollapsed) {
-  const range = selectedText.getRangeAt(0);
-  const span = document.createElement('span');
-  span.style.backgroundColor = 'yellow'; // 형광펜 효과
-  range.surroundContents(span);
-
-  span.setAttribute('highlight_id', highlightId);
-  highlightId++; // 다음 highlight_id를 위해 증가
-
-  // 드래그가 끝나고 마우스 버튼을 떼었을 때 드래그 효과를 해제
-  selectedText.removeAllRanges();
-  }
-
-  // 형광펜 정보 저장
-  const highlightInfo = {
-    text: text, // 형광펜 칠해진 글자 
-    startOffset: start, // 시작 위치
-    endOffset: end, // 끝 위치
-    // 추가 정보 (예: 페이지 식별자, 위치 등)
-  };
-
-  // 형광펜 정보를 백엔드로 전송
-  sendHighlightToServer(highlightInfo);
-  drawStoredHighlightsMemo();
-  sendBodyContentToServer();
-  drawTextContainerFromServer();
-
+  selectedRange.removeAllRanges();
   }
 );
 
 /**************************/
 // 형광펜 정보를 백엔드로 전송하는 함수
-function sendHighlightToServer(highlightInfo) {
+function sendHighlightToServer(highlightInfos) {
 fetch('/api/save-highlight', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
   },
-  body: JSON.stringify(highlightInfo),
+  body: JSON.stringify(highlightInfos),
 });
 }
 
@@ -151,88 +153,23 @@ function drawStoredHighlightsMemo() {
     .catch(error => console.error('Error:', error));
   }
 
-
-/**************************/
-// 하이라이트 텍스트 정보 서버에 보내는 함수
-async function sendBodyContentToServer() {
-    
-    // 'text-container' 요소의 내용을 캡처합니다.
-    const textContainer = document.getElementById('text-container');
-    const textContainerContent = textContainer.innerHTML;
-
-    console.log(textContainerContent);
-
-    /*
-    const divs = document.querySelectorAll('div');
-
-    // 각 div 요소를 순회하면서 클래스 이름을 검사합니다.
-    divs.forEach(div => {
-      // 클래스 리스트에서 'y'로 시작하는 클래스를 찾습니다.
-      if (Array.from(div.classList).some(className => className.startsWith('y'))) {
-        // 새 div 요소를 생성하고 텍스트를 추가합니다.
-        const newDiv = document.createElement('div');
-        newDiv.textContent = div.textContent;
-      }
-    });
-    */
-    try {
-      const response = await fetch('/api/save-text', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ html: textContainerContent })
-      });
-  
-      if (response.ok) {
-        console.log('내용이 서버로 성공적으로 전송되었습니다.');
-      } else {
-        console.error('서버로의 전송에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-}
-
-/**************************/
-// 하이라이트 텍스트 정보 클라이언트로 다시 가져오는 함수
-async function drawTextContainerFromServer() {
-  try {
-    const response = await fetch('/api/get-text');
-    const { html } = await response.json();
-
-    const textContainer = document.getElementById('text-container');
-    textContainer.innerHTML = html.html;
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-
-/**************************/
-// 하이라이트 텍스트 하나 찾는 함수
-function findOneHighlightText(id) {
-  
-}
-
-
-
 /**************************/
 // 하이라이트 메모 하나 찾는 함수
 function findOneHighlight(id) {
-fetch('/api/find-one-highlight', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ id: id }),
-})
-.then(response => {
-  return response.json();
-})
-.then(highlight => {
-  console.log('highlight: ', highlight);
-})
-.catch(error => console.error('Error:', error));
+  fetch('/api/find-one-highlight', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id: id }),
+  })
+  .then(response => {
+    return response.json();
+  })
+  .then(highlight => {
+    console.log('highlight: ', highlight);
+  })
+  .catch(error => console.error('Error:', error));
 }
 
 /**************************/
